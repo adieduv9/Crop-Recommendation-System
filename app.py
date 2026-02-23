@@ -1,73 +1,68 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template, request
 import numpy as np
 import pickle
+from datetime import datetime
+from weather import get_weather
 
-# Create Flask app
 app = Flask(__name__)
 
-# Load model and scalersN
-model_path = 'model.pkl'
-scaler_stand_path = 'standscaler.pkl'
-scaler_minmax_path = 'minmaxscaler.pkl'
+# Load model and scaler
+model = pickle.load(open("model.pkl", "rb"))
+scaler = pickle.load(open("standscaler.pkl", "rb"))
 
-model = pickle.load(open(model_path, 'rb'))
-sc = pickle.load(open(scaler_stand_path, 'rb'))
-ms = pickle.load(open(scaler_minmax_path, 'rb'))
+def get_season(month):
+    if month in [6,7,8,9]:
+        return "Kharif"
+    elif month in [10,11,12,1]:
+        return "Rabi"
+    else:
+        return "Summer"
 
-# Define routes
-@app.route('/')
-def index():
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+
+        try:
+            city = request.form["city"]
+            duration = int(request.form["duration"])
+
+            nitrogen = float(request.form["nitrogen"])
+            phosphorus = float(request.form["phosphorus"])
+            potassium = float(request.form["potassium"])
+            ph = float(request.form["ph"])
+            rainfall = float(request.form["rainfall"])
+
+            # Get live weather
+            weather = get_weather(city)
+            if weather is None:
+                return render_template("index.html", error="Invalid city or API error.")
+
+            temperature, humidity = weather
+
+            # Project future weather
+            projected_temp = temperature + (0.4 * duration)
+
+            current_month = datetime.now().month
+            future_month = (current_month + duration - 1) % 12 + 1
+            season = get_season(future_month)
+
+            # Prepare input for model
+            features = np.array([[nitrogen, phosphorus, potassium,
+                                  projected_temp, humidity, ph, rainfall]])
+
+            scaled = scaler.transform(features)
+            prediction = model.predict(scaled)[0]
+
+            return render_template("index.html",
+                                   prediction=prediction,
+                                   season=season,
+                                   temperature=round(projected_temp,2),
+                                   humidity=humidity)
+
+        except Exception as e:
+            return render_template("index.html", error="Something went wrong.")
+
     return render_template("index.html")
 
-@app.route("/predict", methods=['POST'])
-def predict():
-    # Get input data from the form
-    N = request.form.get('Nitrogen')
-    P = request.form.get('Phosporus')
-    K = request.form.get('Potassium')
-    temp = request.form.get('Temperature')
-    humidity = request.form.get('Humidity')
-    ph = request.form.get('Ph')
-    rainfall = request.form.get('Rainfall')
-
-    # Create feature list and reshape
-    feature_list = [N, P, K, temp, humidity, ph, rainfall]
-    single_pred = np.array(feature_list).reshape(1, -1)
-
-    # Scale features
-    scaled_features = ms.transform(single_pred)
-    final_features = sc.transform(scaled_features)
-
-    # Make prediction
-    prediction = model.predict(final_features)
-
-    # Map prediction to crop
-    crop_dict = {
-        1: "Rice", 2: "Maize", 3: "Jute", 4: "Cotton", 5: "Coconut", 6: "Papaya", 7: "Orange",
-        8: "Apple", 9: "Muskmelon", 10: "Watermelon", 11: "Grapes", 12: "Mango", 13: "Banana",
-        14: "Pomegranate", 15: "Lentil", 16: "Blackgram", 17: "Mungbean", 18: "Mothbeans",
-        19: "Pigeonpeas", 20: "Kidneybeans", 21: "Chickpea", 22: "Coffee"
-    }
-
-    # Get the crop name and image filename based on prediction
-    crop = crop_dict.get(prediction[0], "Unknown")
-    image = f"{prediction[0]}.jpg" if prediction[0] in crop_dict else None
-    result = f"{crop} is the best crop to be cultivated right there" if crop != "Unknown" else "Sorry, we could not determine the best crop to be cultivated with the provided data."
-
-    print(f"Prediction: {prediction[0]}")
-    print(f"Crop: {crop}")
-    print(f"Image: {image}")
-
-    return render_template('index.html', result=result, image=image)
-
-    
-
-    # # Get the crop name based on prediction
-    # crop = crop_dict.get(prediction[0], "Unknown")
-    # result = f"{crop} is the best crop to be cultivated right there" if crop != "Unknown" else "Sorry, we could not determine the best crop to be cultivated with the provided data."
-
-    # return render_template('index.html', result=result)
-
-# Run the app
 if __name__ == "__main__":
     app.run(debug=True)
