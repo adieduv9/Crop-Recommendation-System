@@ -3,61 +3,15 @@
 <head>
     <title>AI Crop Planning System</title>
     <style>
-        body {
-            font-family: Arial;
-            background: #f4f6f9;
-            text-align: center;
-        }
-        form {
-            background: white;
-            padding: 20px;
-            margin: 20px auto;
-            width: 420px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px #ccc;
-        }
-        input, select {
-            width: 95%;
-            padding: 8px;
-            margin: 8px 0;
-        }
-        button {
-            padding: 10px;
-            background: green;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            width: 100%;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background: #e6ffe6;
-            border-radius: 8px;
-        }
-        .error {
-            margin-top: 20px;
-            padding: 15px;
-            background: #ffe6e6;
-            border-radius: 8px;
-            color: red;
-        }
-        #suggestions {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            background: white;
-            border: 1px solid #ccc;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        #suggestions li {
-            padding: 6px;
-            cursor: pointer;
-        }
-        #suggestions li:hover {
-            background: #f0f0f0;
-        }
+        body { font-family: Arial; background: #f4f6f9; text-align: center; }
+        form { background: white; padding: 20px; margin: 20px auto; width: 420px; border-radius: 10px; box-shadow: 0px 0px 10px #ccc; }
+        input, select { width: 95%; padding: 8px; margin: 8px 0; }
+        button { padding: 10px; background: green; color: white; border: none; border-radius: 5px; width: 100%; }
+        .result { margin-top: 20px; padding: 15px; background: #e6ffe6; border-radius: 8px; }
+        .error { margin-top: 20px; padding: 15px; background: #ffe6e6; border-radius: 8px; color: red; }
+        #suggestions { list-style: none; padding: 0; margin: 0; background: white; border: 1px solid #ccc; max-height: 150px; overflow-y: auto; }
+        #suggestions li { padding: 6px; cursor: pointer; }
+        #suggestions li:hover { background: #f0f0f0; }
     </style>
 </head>
 <body>
@@ -96,6 +50,15 @@
     <p>Season: {{ season }}</p>
     <p>Projected Temperature: {{ temperature }} °C</p>
     <p>Humidity: {{ humidity }} %</p>
+
+    {% if top_crops %}
+        <h4>Top 3 Suggestions:</h4>
+        <ul>
+        {% for crop, prob in top_crops %}
+            <li>{{ crop }} — {{ prob }} % confidence</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
 </div>
 {% endif %}
 
